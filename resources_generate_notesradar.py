@@ -1,7 +1,7 @@
 import json
 from os import listdir
 from os.path import join,exists,isdir
-from decimal import Decimal,ROUND_UP
+from decimal import Decimal,ROUND_UP,ROUND_DOWN
 from logging import getLogger
 
 if __name__ == '__main__':
@@ -47,6 +47,7 @@ def generate():
 
     result: dict[str, dict[str, dict[str, dict[str, int | dict[str, float]]]| dict[str, list[dict[str, str | int]]]]] = {}
 
+    registerdata_keys = {}
     nousedsongnames = []
     for key, data in registerdata.items():
         for i, row in data.iterrows():
@@ -76,6 +77,9 @@ def generate():
 
             difficulty = row['difficulty']
             if not difficulty in musics[songname][playmode].keys():
+                text = f'({key})\t{playmode}\t{songname}\t{difficulty}'
+                if not text in nousedsongnames:
+                    nousedsongnames.append(text)
                 continue
 
             if songname in different_charts.keys():
@@ -86,9 +90,6 @@ def generate():
             if not songname in result[playmode]['musics'].keys():
                 result[playmode]['musics'][songname] = {}
             
-            if not notes:
-                continue
-
             result[playmode]['musics'][songname][difficulty] = {
                 'notes': notescount,
                 'radars': {
@@ -100,6 +101,10 @@ def generate():
                     'SOF-LAN': soflan or 0,
                 },
             }
+
+            registerdatakeys_key = f'{playmode} {songname} {difficulty}'
+            if not registerdata_keys.get(registerdatakeys_key):
+                registerdata_keys[registerdatakeys_key] = key
 
     uncertains = []
     overrides = []
@@ -119,14 +124,16 @@ def generate():
                     predictedmaxlower = target3['attributes'][attribute]['lower']
                     predictedmaxupper = target3['attributes'][attribute]['upper']
                     
-                    if predictedmaxlower != predictedmaxupper:
-                        output = [songname, playmode, difficulty, attribute, f'{predictedmaxlower}～{predictedmaxupper}']
-                        uncertains.append(' '.join(output))
-                    
                     registeredvalue = result[playmode]['musics'][songname][difficulty]['radars'][attribute]
+
                     if registeredvalue != 0:
-                        if registeredvalue < predictedmaxlower:
-                            output = [songname, playmode, difficulty, attribute, f'{registeredvalue}->{predictedmaxlower}']
+                        if registeredvalue < predictedmaxlower or predictedmaxupper < registeredvalue:
+                            if predictedmaxlower != predictedmaxupper:
+                                output = [playmode, songname, difficulty, attribute, f'{predictedmaxlower}～{predictedmaxupper}']
+                                uncertains.append(' '.join(output))
+
+                            registerdatakey = registerdata_keys.get(f'{playmode} {songname} {difficulty}')
+                            output = [playmode, songname, difficulty, attribute, f'{registeredvalue}->{predictedmaxlower}', registerdatakey]
                             overrides.append(' '.join(output))
 
                     result[playmode]['musics'][songname][difficulty]['radars'][attribute] = predictedmaxlower
@@ -209,8 +216,8 @@ def load_collectiondata(filepath: str):
 
     data = {playmode: {} for playmode in Playmodes.values}
 
-    format = Decimal('0.00')
-    delta = Decimal('0.01')
+    decimal_format = Decimal('0.00')
+    decimal_delta = Decimal('0.01')
     for key, values in loaddata.items():
         playmode = values['playmode']
         songname = values['songname']
@@ -237,15 +244,26 @@ def load_collectiondata(filepath: str):
                 'upper': 200.00,
             }
         
-        ratio = Decimal(str(score / (notes * 2)))
+        ratio = Decimal(str(score)) / Decimal(str(notes * 2))
 
-        predictedmaxlower = float((chartvalue/ratio).quantize(format, rounding=ROUND_UP))
+        predictedmaxlower = float((chartvalue/ratio).quantize(decimal_format, rounding=ROUND_UP))
         if predictedmaxlower > data[playmode][songname][difficulty]['attributes'][attribute]['lower']:
             data[playmode][songname][difficulty]['attributes'][attribute]['lower'] = predictedmaxlower
 
-        predictedmaxupper = float(((chartvalue+delta)/ratio-delta).quantize(format, rounding=ROUND_UP))
+        predictedmaxupper = float(((chartvalue+decimal_delta)/ratio-decimal_delta).quantize(decimal_format, rounding=ROUND_UP))
         if predictedmaxupper < data[playmode][songname][difficulty]['attributes'][attribute]['upper']:
             data[playmode][songname][difficulty]['attributes'][attribute]['upper'] = predictedmaxupper
+
+        vl = float((Decimal(str(predictedmaxlower))*ratio).quantize(decimal_format, rounding=ROUND_DOWN))
+        vu = float((Decimal(str(predictedmaxupper))*ratio).quantize(decimal_format, rounding=ROUND_DOWN))
+        if values['notesradar_chartvalue'] != vl:
+            report.error(f'Calculation error lower: {playmode} {songname} {difficulty} {attribute} {chartvalue} {predictedmaxlower} {predictedmaxupper}')
+        if values['notesradar_chartvalue'] != vu:
+            report.error(f'Calculation error upper: {playmode} {songname} {difficulty} {attribute} {chartvalue} {predictedmaxlower} {predictedmaxupper}')
+            predictedmaxupper = float(((chartvalue+decimal_delta)/ratio-(decimal_delta*2)).quantize(decimal_format, rounding=ROUND_UP))
+            vu2 = float((Decimal(str(predictedmaxupper))*ratio).quantize(decimal_format, rounding=ROUND_DOWN))
+            if values['notesradar_chartvalue'] != vu2:
+                report.error(f'Calculation error upper2: {playmode} {songname} {difficulty} {attribute} {chartvalue} {predictedmaxlower} {predictedmaxupper}')
 
     return data
 
