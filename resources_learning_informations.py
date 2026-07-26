@@ -12,6 +12,7 @@ logger.debug(f'loaded {logger.name}')
 from PIL import Image
 import numpy as np
 from numpy import array
+import json5
 
 from define import define
 from data_collection import label_result_filepath,images_informations_basepath
@@ -19,7 +20,7 @@ from resources import load_resource_serialized
 from resources_generate import Report,save_resource_serialized,registries_dirname
 from resources_learning import learning_multivaluemask
 
-recognition_define_filename = 'define_recognition_informations.json'
+recognition_define_filename = 'define_recognition_informations.json5'
 recognition_define_filepath = join(registries_dirname, recognition_define_filename)
 
 class Informations():
@@ -58,7 +59,7 @@ def load_informations(labels:dict) -> dict:
 def load_define() -> dict:
     try:
         with open(recognition_define_filepath) as f:
-            ret = json.load(f)
+            ret = json5.load(f)
     except Exception:
         print(f'{recognition_define_filepath}を読み込めませんでした。')
         return None

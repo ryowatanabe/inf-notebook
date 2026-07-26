@@ -2,7 +2,6 @@ import numpy as np
 from random import shuffle
 from os import mkdir
 from os.path import join,exists
-from json import load
 from logging import getLogger
 
 if __name__ == '__main__':
@@ -11,13 +10,14 @@ else:
     logger = getLogger(__name__)
 logger.debug(f'loaded {logger.name}')
 
+import json5
 from PIL import Image
 
 from define import Playsides,define
 from resources_generate import Report,load_raws,save_resource_serialized,registries_dirname
 from resources_learning import learning
 
-recognition_define_filename = 'define_recognition_screen.json'
+recognition_define_filename = 'define_recognition_screen.json5'
 recognition_define_filepath = join(registries_dirname, recognition_define_filename)
 
 resource_filename = f'screenrecognition{define.screenrecognition_version}.res'
@@ -25,7 +25,7 @@ resource_filename = f'screenrecognition{define.screenrecognition_version}.res'
 def load_define() -> dict:
     try:
         with open(recognition_define_filepath) as f:
-            loaded = load(f)
+            loaded = json5.load(f)
     except Exception:
         print(f'{recognition_define_filepath}を読み込めませんでした。')
         return None
