@@ -1,4 +1,6 @@
 from io import BytesIO
+from uuid import uuid1
+from datetime import datetime,timezone
 from logging import getLogger
 
 if __name__ == '__main__':
@@ -34,3 +36,12 @@ def save_imagevalue(data: bytes, filepath: str):
     '''
     with open(filepath, 'wb') as f:
         f.write(data)
+
+def generate_filename(extension: str):
+    '''
+    現在の日時と生成したUUIDからファイル名を生成する
+    
+    Args:
+        extension(str): 拡張子
+    '''
+    return f'{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}_{uuid1()}.{extension}'

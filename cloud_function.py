@@ -15,6 +15,7 @@ logger.debug(f'loaded {logger.name}')
 from google.auth.transport.requests import Request
 from google.oauth2.service_account import IDTokenCredentials
 
+from general import generate_filename
 from service_account_info import service_account_info
 
 URLs = {
@@ -76,7 +77,7 @@ def callfunction_sendinquiry(content: str, filepaths: list[str]):
         'Authorization': f'Bearer {credentials.token}',
     }
 
-    object_name = f'{uuid1()}.zip'
+    object_name = generate_filename('zip')
     
     files = {
         'file': (object_name, generate_zip(content, filepaths), 'application/zip')

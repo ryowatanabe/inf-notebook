@@ -21,6 +21,7 @@ from PIL import Image,ImageDraw
 
 from service_account_info import service_account_info
 from define import define
+from general import generate_filename
 from cloud_function import callfunction_eventdelete
 
 bucket_name_informations = 'bucket-inf-notebook-informations'
@@ -265,7 +266,7 @@ class StorageAccessor():
         if self.client is None:
             return
         
-        object_name = f'{uuid1()}.png'
+        object_name = generate_filename('png')
 
         trim = image.crop(define.informations_trimarea)
         self.worker.pushfunc(self.upload_informations, object_name, trim)
@@ -285,7 +286,7 @@ class StorageAccessor():
         if self.client is None:
             return
         
-        object_name = f'{uuid1()}.png'
+        object_name = generate_filename('png')
 
         trim = image.crop(define.details_trimareas[playside])
         self.worker.pushfunc(self.upload_details, object_name, trim)
@@ -305,7 +306,7 @@ class StorageAccessor():
         if self.client is None:
             return
         
-        object_name = f'{uuid1()}.png'
+        object_name = generate_filename('png')
 
         trim = image.crop(define.resultothers_trimareas[playside])
         self.worker.pushfunc(self.upload_resultothers, object_name, trim)
@@ -322,7 +323,7 @@ class StorageAccessor():
         if self.client is None:
             return
         
-        object_name = f'{uuid1()}.png'
+        object_name = generate_filename('png')
 
         trim = image.crop(define.musicselect_trimarea)
         image_draw = ImageDraw.Draw(trim)
@@ -341,7 +342,7 @@ class StorageAccessor():
         if self.client is None:
             return
         
-        object_name = f'{uuid1()}.json'
+        object_name = generate_filename('json')
 
         self.worker.pushfunc(self.upload_notesradarvalue, object_name, data)
         if not self.worker.is_alive():
